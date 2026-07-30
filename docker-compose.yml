@@ -1,0 +1,21 @@
+services:
+
+
+ database:
+   container_name: template-database
+   image: postgres:17-alpine
+   ports:
+     - '5432:5432'
+   environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+     - POSTGRES_DB=database
+   healthcheck:
+     test: pg_isready -U postgres
+     retries: 5
+     interval: 10s
+
+
+secrets:
+ pip_conf:
+   file: ~/.config/pip/pip.conf
