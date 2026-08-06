@@ -1,3 +1,7 @@
+import datetime
+import random
+from decimal import Decimal
+from enum import Enum
 from typing import Any, Type, TypeVar
 
 from factory.alchemy import SQLAlchemyModelFactory
@@ -6,6 +10,7 @@ from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from project_template.api.common.database.models import BaseEntity
+from project_template.api.common.enums import StringEnum
 
 faker = Faker()
 T = TypeVar("T")
@@ -25,10 +30,16 @@ def random_by_type(pytype: type) -> Any:
         return faker.word()
     elif pytype is int:
         return faker.random_int(1, 1000)
-    elif pytype is float:
+    elif pytype is float or pytype is Decimal:
         return faker.pyfloat(left_digits=2, right_digits=4, positive=True)
     elif pytype is bool:
         return faker.boolean()
+    elif pytype is datetime:
+        return faker.date_time()
+    elif issubclass(pytype, StringEnum):
+        return random.choice([str(e) for e in pytype])
+    elif issubclass(pytype, Enum):
+        return random.choice([str(e) for e in pytype])
     else:
         raise NotImplementedError
 

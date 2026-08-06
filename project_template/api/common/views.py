@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from functools import lru_cache
 from typing import Any, Callable, Dict, Generic, TypeVar, get_args, get_type_hints
 
@@ -16,7 +17,7 @@ from project_template.api.common.context import (
 )
 from project_template.api.common.database.models import BaseEntity, get_object_or_404
 from project_template.api.common.database.session import get_request_db_session
-from project_template.api.common.enums import ViewSetAction, _Unset
+from project_template.api.common.enums import ViewSetAction
 from project_template.api.common.exceptions.exceptions import (
     ApiPydanticValidationException,
     ForeignKeyViolationException,
@@ -28,6 +29,17 @@ MODEL_TYPE = TypeVar("MODEL_TYPE", bound=BaseEntity)
 E = TypeVar("E", bound=BaseEntity)
 S = TypeVar("S", bound=BaseSerializer)
 CustomActionName = TypeVar("CustomActionName", bound=str)
+
+
+class PaginationParams(BaseModel):
+    """
+    Defines pagination and ordering parameters for list endpoints.
+    Supports page-based pagination and Django-style ordering strings.
+    """
+
+    page: int | None = Query(None, ge=0)
+    page_size: int | None = Query(None, ge=1, le=100)
+    order_by: str | None = None
 
 
 class GenericViewSet(Generic[MODEL_TYPE]):
@@ -155,17 +167,6 @@ class GenericViewSet(Generic[MODEL_TYPE]):
     @staticmethod
     def _join_urls(*parts: str) -> str:
         return "/" + "/".join(p.strip("/") for p in parts if p)
-
-
-class PaginationParams(BaseModel):
-    """
-    Defines pagination and ordering parameters for list endpoints.
-    Supports page-based pagination and Django-style ordering strings.
-    """
-
-    page: int | None = Query(None, ge=0)
-    page_size: int | None = Query(None, ge=1, le=100)
-    order_by: str | None = None
 
 
 class ListMixin:
@@ -371,11 +372,14 @@ class UpdateMixin:
                 continue
 
             src_field = source.model_fields.get(name)
-            json_extra = (src_field.json_schema_extra if src_field else None) or {}
-            fields[name] = (
-                typ | None | _Unset,
-                Field(default=_Unset, json_schema_extra=json_extra),
-            )
+            if src_field is not None:
+                # Preserve all constraints/metadata from the creation serializer field.
+                update_field = deepcopy(src_field)
+                update_field.default = None
+                update_field.default_factory = None
+                fields[name] = (typ | None, update_field)
+            else:
+                fields[name] = (typ | None, Field(default=None))
 
         return create_model(
             f"Update{source.__name__}",
@@ -402,13 +406,10 @@ class UpdateMixin:
         annotations = get_type_hints(create_serializer_cls, include_extras=True)
         errors = []
         for field_name, field_type in annotations.items():
-            field_value = data.get(field_name, _Unset)
-            if field_value == _Unset:
+            if field_name not in data:
                 continue
 
-            if self._is_required_field(field_type) and (
-                field_name not in data or data[field_name] is None
-            ):
+            if self._is_required_field(field_type) and data[field_name] is None:
                 errors.append(
                     {
                         "type": "missing",

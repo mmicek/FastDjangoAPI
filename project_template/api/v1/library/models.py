@@ -21,7 +21,7 @@ class Chapter(BaseEntity):
     book_id: Mapped[int] = mapped_column(ForeignKey("book.id"), nullable=False)
     author_id: Mapped[int] = mapped_column(ForeignKey("author.id"), nullable=False)
 
-    book: Mapped[Book] = relationship("Book", back_populates="chapters")
+    book: Mapped["Book"] = relationship("Book", back_populates="chapters")
     author: Mapped[Author] = relationship("Author")
 
 
