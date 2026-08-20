@@ -1,5 +1,5 @@
-import datetime
 import random
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Type, TypeVar
@@ -40,14 +40,16 @@ def random_by_type(pytype: type) -> Any:
         return random.choice([str(e) for e in pytype])
     elif issubclass(pytype, Enum):
         return random.choice([str(e) for e in pytype])
+    elif issubclass(pytype, dict):
+        return dict()
     else:
-        raise NotImplementedError
+        raise NotImplementedError(pytype)
 
 
-async def create_entity_factory(
-    session: AsyncSession,
+def create_instance_factory(
     entity_type: Type[BaseEntity] | Type[SQLAlchemyModelFactory],
-    add_and_commit: bool = True,
+    session: AsyncSession | None = None,
+    populate_random_foreign_keys: bool = False,
     **overrides,
 ) -> T:
     """
@@ -55,7 +57,8 @@ async def create_entity_factory(
     Automatically populates missing fields with fake data and optionally persists the instance.
     """
     if issubclass(entity_type, SQLAlchemyModelFactory):
-        entity_type._meta.sqlalchemy_session = session
+        if session:
+            entity_type._meta.sqlalchemy_session = session
         instance = entity_type.build(**overrides)
         model_cls = entity_type._meta.model
     else:
@@ -77,13 +80,26 @@ async def create_entity_factory(
             setattr(instance, name, overrides[name])
             continue
 
+        if column.foreign_keys and populate_random_foreign_keys:
+            setattr(instance, name, 1)
+            continue
+
         if name in ["created_at", "updated_at", "deleted_at", "deleted_by"] or (
             (column.primary_key and column.autoincrement) or column.foreign_keys
         ):
             continue
 
         setattr(instance, name, random_by_type(column.type.python_type))
+    return instance
 
+
+async def create_entity_factory(
+    session: AsyncSession,
+    entity_type: Type[BaseEntity] | Type[SQLAlchemyModelFactory],
+    add_and_commit: bool = True,
+    **overrides,
+) -> T:
+    instance = create_instance_factory(entity_type, session, **overrides)
     if add_and_commit:
         session.add(instance)
         await session.commit()

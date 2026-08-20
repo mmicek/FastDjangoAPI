@@ -8,7 +8,7 @@ from project_template.api.common.database.models import (
     BaseEntity,
 )  # noqa pycharm do not see it
 from project_template.api.v1.imports import *  # noqa ruff does not like it
-from project_template.config import DATABASE_SCHEMA, Env, settings
+from project_template.config import DATABASE_SCHEMA, settings
 from project_template.logger import configure_logging
 
 config = context.config
