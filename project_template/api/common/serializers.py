@@ -1,3 +1,4 @@
+from enum import Enum, EnumType
 from functools import lru_cache
 from typing import Annotated, Any, Union, get_args, get_origin
 
@@ -6,7 +7,6 @@ from pydantic.fields import FieldInfo
 from sqlalchemy import select
 
 from project_template.api.common.database.models import BaseEntity, get_object_or_404
-from project_template.api.common.enums import _Unset
 from project_template.api.common.fields import PrimaryKeyRelation
 
 
@@ -36,7 +36,7 @@ class BaseSerializer(BaseModel):
 
         for field_name, relation in self._get_primary_related_fields():
             pk = getattr(self, field_name)
-            if pk is None or pk == _Unset:
+            if pk is None:
                 continue
 
             model = relation.model
@@ -48,20 +48,52 @@ class BaseSerializer(BaseModel):
             if source is not None:
                 object.__setattr__(self, source, obj)
 
+    @classmethod
+    def get_possible_values_for_enumerated_types(cls) -> dict[str, list[Any]]:
+        """
+        Return a dict mapping enumerated types to a list of possible values.
+        """
+        enum_fields = {}
+
+        for field_name, field_info in cls.model_fields.items():
+            type_annotation = None
+            annotations = get_args(field_info.annotation)
+            for annotation in annotations:
+                if issubclass(annotation, Enum):
+                    type_annotation = annotation
+                    break
+
+            if type_annotation:
+                enum_fields[field_name] = type_annotation
+            else:
+                if field_info.annotation and type(field_info.annotation) is EnumType:
+                    enum_fields[field_name] = field_info.annotation
+
+        return enum_fields
+
+    @classmethod
+    def list_model_validate(cls, models: list[BaseModel]):
+        return [cls.model_validate(model) for model in models]
+
     @model_validator(mode="before")
     @classmethod
-    def _before_model_validation(cls, data: str | BaseEntity):
+    def _before_model_validation(cls, data: dict | BaseEntity):
+        for field_name, conversion_mapping in cls._get_convertable_fields().items():
+            try:
+                if isinstance(data, dict):
+                    data[field_name] = conversion_mapping[data[field_name]]
+                else:
+                    setattr(
+                        data, field_name, conversion_mapping[getattr(data, field_name)]
+                    )
+            except KeyError:
+                ...
+
         for field_name, sources in cls._get_multiple_source_fields().items():
             for source in sources:
                 if cls._replace_field(data, field_name, source):
                     break
         return data
-
-    @model_validator(mode="after")
-    def _after_model_validation(self):
-        for field_name, conversion_mapping in self._get_convertable_fields().items():
-            self.__dict__[field_name] = conversion_mapping.get(field_name)
-        return self
 
     @classmethod
     @lru_cache(maxsize=None)
@@ -183,3 +215,7 @@ class BaseModelSerializer(BaseSerializer):
                 field
             ]  # Don't throw exception there. We do not want to override the exception.
         return self.Meta.model(**data)  # noqa model is not None
+
+
+class SuccessResponse(BaseSerializer):
+    success: bool = True

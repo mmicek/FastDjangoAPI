@@ -15,11 +15,10 @@ class Env(StrEnum):
     PROD = "prod"
     TEST = "test"
 
-    @staticmethod
-    def is_local(env: Env) -> bool:
+    def is_local(self) -> bool:
         """Returns True if the environment is local or test (non-production - meaning not dev, demo or prod)"""
 
-        return env == Env.LOCAL or env == Env.TEST
+        return self == Env.LOCAL or self == Env.TEST
 
 
 class Settings(BaseSettings):

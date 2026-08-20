@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class EntityQuery:
-    def __init__(self, entity_query_manager: EntityQueryManager):
+    def __init__(self, entity_query_manager: "EntityQueryManager"):
         self.entity_query_manager = entity_query_manager
         self.query = select(self.entity_query_manager.entity_class)
 

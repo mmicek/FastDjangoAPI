@@ -1,12 +1,48 @@
 from enum import IntEnum, StrEnum
 
-from pydantic_core import core_schema
+from sqlalchemy import Enum as SAEnum
 
 
-class _Unset:
-    @staticmethod
-    def __get_pydantic_core_schema__(source_type, handler):
-        return core_schema.any_schema()
+class StringEnum(StrEnum):
+    """
+    Allows to put two values: database_value, human_readable_value like:
+
+
+    PROGRAMMATIC_VALUE = "database_value", "human_readable_value"
+    """
+
+    def __new__(cls, db_value, description):
+        obj = str.__new__(cls, db_value)
+        obj._value_ = db_value
+        obj.description = description
+        return obj
+
+    def __str__(self):
+        return self.value
+
+    @classmethod
+    def _missing_(cls, value):
+        """
+        Due to the fact, that Excel file is assuming the type of the column by values so,
+         it might put integer type if enum values are strings that looks like numeric value: "45"
+        """
+        if isinstance(value, int) or isinstance(value, float):
+            return cls(str(value))
+        return None
+
+
+def StringEnumType(enum_cls, **kwargs):  # noqa
+    """
+    Uses member value not member name for StringEnum enums for sqlalchemy enum.
+
+
+    If you define:
+      PP = "pp", "parent pipe"
+    and generate alembic migration from this, you will get "PP" as an enum. You need to use this class to get "pp".
+    """
+    return SAEnum(
+        enum_cls, values_callable=lambda e: [str(item) for item in e], **kwargs
+    )
 
 
 class ViewSetAction(StrEnum):
@@ -34,19 +70,3 @@ class ApiErrorCode(IntEnum):
 
     # 9xxxxx Internal
     INTERNAL_SERVER_ERROR = 999990
-
-    # APPS EXCEPTIONS
-    """
-    6xxxxx - Dataset exceptions
-    601xxx - General dataset exceptions
- 
-    7xxxxx - Other exceptions
-    """
-    PIPE_ALREADY_HAS_LINER_EXCEPTION = 601001
-
-    DATA_IMPORT_VALIDATION_EXCEPTION = 701000
-    NOT_UNIQUE_PRIMARY_KEY_EXCEPTION = 701001
-    FK_RELATION_DOES_NOT_EXIST_EXCEPTION = 701002
-    DATASET_CREATE_RECORD_VALIDATION_EXCEPTION = 701003
-    DATASET_FRONT_SHEET_VALIDATION_EXCEPTION = 701004
-    PIPE_DOES_NOT_EXIST_EXCEPTION = 701005

@@ -12,6 +12,7 @@ class DatabaseSessionManager:
     """
 
     def __init__(self, url: str, engine_kwargs: dict[str, Any]):
+        self.connection_string = url
         self.engine = create_async_engine(url, **engine_kwargs)
 
     @contextlib.asynccontextmanager

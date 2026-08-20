@@ -8,7 +8,7 @@ from project_template.api.common.database.models import (
     BaseEntity,
 )  # noqa pycharm do not see it
 from project_template.api.v1.imports import *  # noqa ruff does not like it
-from project_template.config import DATABASE_SCHEMA, Env, settings
+from project_template.config import DATABASE_SCHEMA, settings
 from project_template.logger import configure_logging
 
 config = context.config
@@ -38,16 +38,6 @@ def process_revision_directives(_context, _revision, directives):
             max_seq = max(max_seq, int(prefix))
 
     script.rev_id = f"{max_seq + 1:04d}"
-
-
-def drop_alembic_version_if_dev(connection) -> None:
-    """Drop the alembic_version table on DEV so revisions mismatch doesn't cause issues when running migrations."""
-    logger.info("Current environment: %s", settings.environment)
-    if settings.environment == Env.DEV:
-        logger.info("Dropping alembic_version table")
-        connection.execute(text(f"DROP SCHEMA IF EXISTS {DATABASE_SCHEMA} CASCADE;"))
-        connection.execute(text("DROP TABLE IF EXISTS public.alembic_version"))
-        logger.info("Dropped schema project_template and alembic_version table.")
 
 
 def run_migrations_offline() -> None:

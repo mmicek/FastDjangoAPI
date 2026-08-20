@@ -1,9 +1,9 @@
 from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from sqlalchemy import MetaData, Select, delete, inspect
+from sqlalchemy import Integer, MetaData, Select, delete, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from project_template.api.common.database.queries import EntityQueryManager
 from project_template.api.common.database.session import get_request_db_session
@@ -22,6 +22,8 @@ class BaseEntity(DeclarativeBase):
     Defines shared metadata configuration, naming conventions, and schema settings.
     Provides common helper methods for CRUD-like operations tied to the request session lifecycle.
     """
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     __table_args__ = {"extend_existing": True}
     metadata = MetaData(
@@ -98,7 +100,7 @@ TBS = TypeVar("TBS", bound="BaseSerializer")
 TE = TypeVar("TE", bound=BaseEntity)
 
 
-async def get_object_or_404(
+async def get_object_or_404[TE](
     query: Select[tuple[TE]],
     statement,
     *args,
