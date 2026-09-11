@@ -24,12 +24,12 @@ from project_template.config import settings
 from project_template.logger import configure_logging
 
 
-class HiveApp(FastAPI):
+class TemplateApp(FastAPI):
     session_manager: DatabaseSessionManager
 
 
 @asynccontextmanager
-async def lifespan(h_app: HiveApp):
+async def lifespan(h_app: TemplateApp):
     configure_logging()
     h_app.session_manager = DatabaseSessionManager(
         settings.database_connection_string,
@@ -42,19 +42,19 @@ async def lifespan(h_app: HiveApp):
     yield
 
 
-def create_app(life_span: Callable) -> HiveApp:
-    hive_app = HiveApp(
-        title="Hive API",
-        description="API for Hive application",
+def create_app(life_span: Callable) -> TemplateApp:
+    _app = TemplateApp(
+        title="API",
+        description="API for application",
         version="1.0.0",
         lifespan=life_span,
     )
-    hive_app.cache = TTLCache(
+    _app.cache = TTLCache(
         maxsize=10_000,
         ttl=60 * 60 * 24 * 3,  # 3 days
     )
-    hive_app.add_middleware(TrailingSlashRedirectMiddleware)
-    hive_app.add_middleware(
+    _app.add_middleware(TrailingSlashRedirectMiddleware)
+    _app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
@@ -62,14 +62,14 @@ def create_app(life_span: Callable) -> HiveApp:
         allow_headers=["*"],
     )
     if settings.DEBUG_MODE:
-        hive_app.add_exception_handler(500, internal_server_error_handler)
-    hive_app.add_exception_handler(HTTPException, http_exception_handler)
-    hive_app.add_exception_handler(
+        _app.add_exception_handler(500, internal_server_error_handler)
+    _app.add_exception_handler(HTTPException, http_exception_handler)
+    _app.add_exception_handler(
         RequestValidationError, request_validation_exception_handler
     )
-    hive_app.include_router(api_v1_router)
-    hive_app.include_router(api_common_router)
-    return hive_app
+    _app.include_router(api_v1_router)
+    _app.include_router(api_common_router)
+    return _app
 
 
 def get_app():

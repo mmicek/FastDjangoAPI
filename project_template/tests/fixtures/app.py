@@ -4,7 +4,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from project_template.config import Env, settings
-from project_template.main import HiveApp, create_app
+from project_template.main import TemplateApp, create_app
 
 
 @pytest.fixture()
@@ -21,6 +21,6 @@ async def app(_test_database_manager, context_db):
 
 
 @pytest.fixture(scope="function")
-def client(app: HiveApp):
+def client(app: TemplateApp):
     with TestClient(app) as client:
         yield client

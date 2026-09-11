@@ -205,10 +205,10 @@ designed to make FastAPI development faster, more structured, and easier to main
 Running the application:
 - Development - From the '/backend' directory, start the application using one of the following methods:
   * fastapi dev
-  * uv run fastapi dev --entrypoint hive.main:get_app
-  * python main.py  ->  inside /backend/hive
+  * uv run fastapi dev --entrypoint project_template.main:get_app
+  * python main.py  ->  inside /project_template
 - For production development, run Uvicorn directly using the application factory:
-  * uvicorn hive.main:get_app --factory
+  * uvicorn project_template.main:get_app --factory
 
 #### 2. Application setup and lifespan management
 Application settings are defined in 'config.py' using a centralized settings class (BaseSettings from pydantic_settings).
